@@ -1,4 +1,4 @@
-# Prueba de voces en español para Abecé (21/10/2026).
+# Prueba de voces en español para Abecé (21/10/2026; segunda tanda el 22/10/2026).
 # Genera las mismas frases con cada voz candidata y arma prueba/index.html para escucharlas en el teléfono.
 #   Silero v3_es (es_0, es_1, es_2): licencia CC BY-NC 4.0, la misma familia que las voces rusas de Azbuka.
 #   Piper es_ES (davefx, sharvard hombre y mujer): plan B, para comparar; licencia de cada voz a confirmar.
@@ -51,7 +51,39 @@ PIPER = [
     ("piper-davefx", "Piper · davefx", "es/es_ES/davefx/medium/es_ES-davefx-medium", None),
     ("piper-sharvard-0", "Piper · sharvard (voz 0)", "es/es_ES/sharvard/medium/es_ES-sharvard-medium", 0),
     ("piper-sharvard-1", "Piper · sharvard (voz 1)", "es/es_ES/sharvard/medium/es_ES-sharvard-medium", 1),
+    # 22/10/2026: las otras voces de España de Piper, buscando más voces de mujer
+    ("piper-mls_9972", "Piper · mls_9972", "es/es_ES/mls_9972/low/es_ES-mls_9972-low", None),
+    ("piper-mls_10246", "Piper · mls_10246", "es/es_ES/mls_10246/low/es_ES-mls_10246-low", None),
+    ("piper-carlfm", "Piper · carlfm", "es/es_ES/carlfm/x_low/es_ES-carlfm-x_low", None),
 ]
+
+# 22/10/2026: la única voz de mujer era sharvard 1, así que se prueba con otro tono (misma velocidad),
+# por si alcanza para tener dos personajes mujeres distintos (Ana y Lucía).
+TONOS = [("piper-sharvard-1-aguda", "sharvard (voz 1) · más aguda", 1.08),
+         ("piper-sharvard-1-grave", "sharvard (voz 1) · más grave", 0.93)]
+
+def tonos(voces):
+    base = os.path.join(SALIDA, "piper-sharvard-1")
+    if not os.path.isdir(base):
+        return
+    for clave, nombre, f in TONOS:
+        os.makedirs(os.path.join(SALIDA, clave), exist_ok=True)
+        for i in range(1, len(FRASES) + 1):
+            src = os.path.join(base, f"{i:02}.m4a")
+            if os.path.exists(src):
+                subprocess.run(["ffmpeg", "-loglevel", "error", "-y", "-i", src, "-af",
+                                f"asetrate=24000*{f},aresample=24000,atempo={1/f:.4f}",
+                                "-ac", "1", "-c:a", "aac", "-b:a", "48k", os.path.join(SALIDA, clave, f"{i:02}.m4a")], check=True)
+        voces.append((clave, nombre, "Piper · mismo audio con otro tono"))
+
+LICENCIAS = {
+    "piper-davefx": "Piper · licencia a confirmar",
+    "piper-sharvard-0": "Piper · datos Sharvard, CC BY 3.0",
+    "piper-sharvard-1": "Piper · datos Sharvard, CC BY 3.0",
+    "piper-mls_9972": "Piper · datos MLS, CC BY 4.0",
+    "piper-mls_10246": "Piper · datos MLS, CC BY 4.0",
+    "piper-carlfm": "Piper · licencia a confirmar",
+}
 
 def piper(voces):
     base = "https://huggingface.co/rhasspy/piper-voices/resolve/main/"
@@ -69,7 +101,7 @@ def piper(voces):
                     cmd += ["--speaker", str(hablante)]
                 subprocess.run(cmd, input=t.encode("utf-8"), check=True, capture_output=True)
                 m4a(wav, wav[:-4] + ".m4a")
-            voces.append((clave, nombre, "Piper · plan B, licencia a confirmar"))
+            voces.append((clave, nombre, LICENCIAS.get(clave, "Piper · licencia a confirmar")))
         except Exception as e:
             print("✗", clave, e)
 
@@ -99,5 +131,6 @@ if __name__ == "__main__":
     except Exception as e:
         print("✗ Silero:", e)
     piper(voces)
+    tonos(voces)
     pagina(voces)
     print("✓", len(voces), "voces")
