@@ -1,0 +1,103 @@
+# Genera las voces de ABECÉ y las publica en este repo (03/11/2026). Espejo del workflow «Voces» de Azbuka_voces.
+# Lee la app de manum876/Azbuka_v3: la lista de textos (herramientas/voces/inventario-es.js)
+# y el generador (herramientas/voces/generar-voces-es.py) viven allá.
+# Se corre a mano: Actions → «Voces» → Run workflow (16 partes a la vez). Solo hace los audios que faltan,
+# y borra los de textos que ya no están en la app. A medida que se suman unidades, lecturas o la charla
+# con Lucía, alcanza con volver a correrlo: el inventario ya las busca.
+# Formato, igual que Azbuka: AAC 48 kbps, mono, 24 kHz (.m4a).
+name: Voces
+on:
+  workflow_dispatch:
+    inputs:
+      grupo:
+        description: "todo = unidades, módulos, diccionario, formas y los verbos frecuentes y enseñados · completo = además TODOS los verbos (~750 MB, cerca del límite de 1 GB)"
+        type: choice
+        default: todo
+        options: [todo, completo]
+permissions:
+  contents: write
+concurrency:
+  group: voces
+  cancel-in-progress: false
+jobs:
+  generar:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 340
+    strategy:
+      fail-fast: false
+      matrix:
+        parte: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          path: voces
+          sparse-checkout: v1/indice.json
+          sparse-checkout-cone-mode: false
+      - uses: actions/checkout@v7
+        with:
+          repository: manum876/Azbuka_v3
+          path: app
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.11"
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "22"
+      - name: Instalar lo necesario
+        run: |
+          sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg
+          pip install --quiet torch --index-url https://download.pytorch.org/whl/cpu
+          pip install --quiet numpy omegaconf piper-tts==1.2.0
+      - name: Lista de textos
+        run: node app/herramientas/voces/inventario-es.js app lista.json ${{ inputs.grupo || 'todo' }}
+      - name: Generar los audios que faltan (parte ${{ matrix.parte }} de 16)
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p voces/v1 nuevos
+          python app/herramientas/voces/generar-voces-es.py audios lista.json voces/v1 nuevos ${{ matrix.parte }} 16
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: parte-${{ matrix.parte }}
+          path: nuevos
+          if-no-files-found: ignore
+          retention-days: 2
+  publicar:
+    needs: generar
+    if: always()
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          path: voces
+      - uses: actions/checkout@v7
+        with:
+          repository: manum876/Azbuka_v3
+          path: app
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.11"
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "22"
+      - uses: actions/download-artifact@v8
+        continue-on-error: true
+        with:
+          pattern: parte-*
+          merge-multiple: true
+          path: voces/v1
+      - name: Índice
+        run: |
+          node app/herramientas/voces/inventario-es.js app lista.json ${{ inputs.grupo || 'todo' }}
+          mkdir -p voces/v1
+          python app/herramientas/voces/generar-voces-es.py indice lista.json voces/v1
+          touch voces/.nojekyll
+      - name: Guardar en el repo
+        run: |
+          cd voces
+          git config user.name "Abecé (voces)"
+          git config user.email "azbuka.aprenderuso@gmail.com"
+          git add -A v1 .nojekyll
+          git diff --cached --quiet && echo "No hay cambios" || git commit -q -m "Voces (Piper y Silero)"
+          git push
