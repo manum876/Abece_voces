@@ -12,14 +12,16 @@ Audios en español de **Abecé**, la dirección de [Азбука](https://github
 
 ## Elenco
 
+Desde el 03/11/2026 (Manu, tras la prueba de palabras: Piper pronunciaba mal las palabras sueltas, Silero bien):
+
 | Voz (carpeta) | Quién | Modelo |
 |---|---|---|
-| `ana` | Ana y la narración | Piper es_ES sharvard, voz 1, tono más agudo (×1,08) |
-| `lucia` | Lucía | Piper sharvard, voz 1, tono más grave (×0,93) |
-| `javier` | Javier, el profesor | Piper sharvard, voz 0 |
-| `mujer` | Personajes secundarios mujeres | Piper sharvard, voz 1 |
-| `hombre`, `hombre2` | Personajes secundarios hombres | Silero v3_es es_2 y es_1 |
-| `mayor` | Personas mayores (reservada) | Silero v3_es es_0 |
+| `es2` | La narración (palabras, frases, ejercicios, Diccionario, Verbos…) y Pablo | Silero v3_es es_2 |
+| `es1` | Javier, el profesor | Silero v3_es es_1 |
+| `es0` | Hombres secundarios (recepcionista…) | Silero v3_es es_0 |
+| `ana`, `lucia`, `mujer` | Ana, Lucía y las mujeres secundarias, solo en sus líneas de diálogo (Silero no tiene voces de mujer) | Piper es_ES sharvard, voz 1 (Ana ×1,08, Lucía ×0,93, las demás en su tono) |
+
+La **prueba de palabras** (Actions → «Prueba de palabras») está en `prueba-palabras/`.
 
 ## Licencias
 
